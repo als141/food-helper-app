@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import random
@@ -6,14 +6,15 @@ import pandas as pd
 import time
 from deap import base, creator, tools, algorithms
 import numpy as np
-from typing import List
+from typing import List, Dict
 
 app = FastAPI()
 
 origins = [
     "https://food-helper-app.vercel.app",
     "http://localhost",
-    "http://localhost:8000",
+    "http://localhost:8080",
+    "http://localhost:3000",
     # 必要に応じて他のオリジンを追加
 ]
 
@@ -24,7 +25,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # ランダムシードの設定
 random.seed(time.time())
@@ -79,8 +79,13 @@ class FoodSelection(BaseModel):
     foods: list[FoodItem]
     ideal_pfc: dict
 
+# グローバル変数で最適化の進捗を追跡
+optimization_progress = {"progress": 0, "status": "待機中"}
+optimization_result = None
+
 # 進化計算によるPFCバランスの最適化を関数化
 def optimize_pfc(available_foods, max_quantities, ideal_pfc):
+    global optimization_progress
     low = [0.0] * len(available_foods)
     up = max_quantities
 
@@ -174,10 +179,15 @@ def optimize_pfc(available_foods, max_quantities, ideal_pfc):
         population = toolbox.population(n=2000)
         hof = tools.HallOfFame(10)
 
-        algorithms.eaSimple(
-            population, toolbox, cxpb=0.7, mutpb=0.3, ngen=NGEN,
-            stats=stats, halloffame=hof, verbose=False
-        )
+        # 世代ごとにコールバック関数を呼び出す
+        for gen in range(NGEN):
+            population, logbook = algorithms.eaSimple(
+                population, toolbox, cxpb=0.7, mutpb=0.3, ngen=1, # ngenを1に設定
+                stats=stats, halloffame=hof, verbose=False
+            )
+            progress = int((gen + 1) / NGEN * 100)
+            optimization_progress["progress"] = progress
+            optimization_progress["status"] = f"最適化中... {progress}%"
 
         best_individuals.extend(hof)
 
@@ -244,6 +254,16 @@ def optimize_pfc(available_foods, max_quantities, ideal_pfc):
 
     return results
 
+# 最適化を非同期で実行する関数
+def run_optimization(available_foods, max_quantities, ideal_pfc):
+    global optimization_progress, optimization_result
+    optimization_progress = {"progress": 0, "status": "最適化を開始しています..."}
+    
+    results = optimize_pfc(available_foods, max_quantities, ideal_pfc)
+    
+    optimization_progress = {"progress": 100, "status": "最適化が完了しました"}
+    optimization_result = results
+
 # 食材名の一覧を取得する関数
 def get_food_names() -> List[str]:
     return list(pfc_dict.keys())
@@ -253,11 +273,13 @@ def search_food_names(query: str) -> List[str]:
     query = query.lower()
     return [name for name in get_food_names() if query in name.lower()]
 
-
-
 # エンドポイントの定義
 @app.post("/optimize")
-def optimize_food(food_selection: FoodSelection):
+async def optimize_food(food_selection: FoodSelection, background_tasks: BackgroundTasks):
+    global optimization_progress, optimization_result
+    optimization_progress = {"progress": 0, "status": "最適化を開始しています..."}
+    optimization_result = None
+
     available_foods = [item.name for item in food_selection.foods]
     max_quantities = [item.max_quantity for item in food_selection.foods]
     ideal_pfc = food_selection.ideal_pfc
@@ -267,8 +289,73 @@ def optimize_food(food_selection: FoodSelection):
         if food not in pfc_dict:
             return {"error": f"{food} はデータに存在しません。"}
 
-    results = optimize_pfc(available_foods, max_quantities, ideal_pfc)
-    return results
+    # バックグラウンドタスクとして最適化を実行
+    background_tasks.add_task(run_optimization, available_foods, max_quantities, ideal_pfc)
+
+    return {"message": "最適化を開始しました"}
+
+# 進捗状況を取得するエンドポイント
+@app.get("/optimization_progress")
+async def get_optimization_progress():
+    global optimization_progress, optimization_result
+    if optimization_result is not None:
+        return {"progress": 100, "status": "完了", "result": optimization_result}
+    return optimization_progress
+
+# ジャンル名の英語から日本語への変換辞書
+genre_translation = {
+    'dairy': '乳製品',
+    'fruits': '果物',
+    'grains': '穀物',
+    'meat': '肉',
+    'mushrooms': 'きのこ',
+    'nuts': 'ナッツ',
+    'salad': 'サラダ',
+    'seafood': '魚介類',
+    'seaweed': '海藻',
+    'sugar': '砂糖',
+    'tubers': 'イモ類'
+}
+
+# ジャンルごとの食材リストを作成 (日本語ジャンル名を使用)
+genre_foods: Dict[str, List[str]] = {}
+for _, row in df.iterrows():
+    genre_en = row['genre']
+    if pd.isna(genre_en):  # ジャンルが空の場合はスキップ
+        continue
+    genre_ja = genre_translation.get(genre_en, genre_en)  # 翻訳がない場合は英語をそのまま使用
+    food_name = row['food_name']
+    if pd.isna(food_name):  # 食材名が空の場合はスキップ
+        continue
+    if genre_ja not in genre_foods:
+        genre_foods[genre_ja] = []
+    genre_foods[genre_ja].append(food_name)
+
+# ジャンルの一覧を取得するエンドポイント
+@app.get("/genres")
+def get_genres():
+    return {"genres": list(genre_foods.keys())}
+
+# 特定のジャンルの食材リストを取得するエンドポイント
+@app.get("/foods_in_genre/{genre}")
+def get_foods_in_genre(genre: str):
+    if genre not in genre_foods:
+        raise HTTPException(status_code=404, detail="ジャンルが見つかりません")
+    return {"foods": genre_foods[genre]}
+
+# 新しいエンドポイント: 食材の詳細情報を取得
+@app.get("/food_details/{food_name}")
+def get_food_details(food_name: str):
+    if food_name not in pfc_dict:
+        raise HTTPException(status_code=404, detail="食材が見つかりません")
+    food_info = pfc_dict[food_name]
+    return {
+        "name": food_name,
+        "protein": food_info["protein"],
+        "fat": food_info["fat"],
+        "carbs": food_info["carbs"],
+        "unit": food_info["unit"]
+    }
 
 # 新しいエンドポイント: 食材名の一覧を取得
 @app.get("/food_names")
