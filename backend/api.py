@@ -10,14 +10,21 @@ from typing import List
 
 app = FastAPI()
 
-# CORS設定を追加
+origins = [
+    "https://food-helper-app.vercel.app",
+    "http://localhost",
+    "http://localhost:8000",
+    # 必要に応じて他のオリジンを追加
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 必要に応じてオリジンを制限
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # ランダムシードの設定
 random.seed(time.time())
