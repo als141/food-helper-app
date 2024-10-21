@@ -16,7 +16,7 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # ポート80を公開
-EXPOSE 80
+EXPOSE 8080
 
 # supervisordを起動
 CMD ["/usr/bin/supervisord"]
