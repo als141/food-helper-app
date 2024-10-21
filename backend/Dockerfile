@@ -24,5 +24,6 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # ポート8080を公開
 EXPOSE 8080
 
-# supervisordを起動し、設定ファイルを指定
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+# supervisordを起動
+CMD ["/usr/bin/supervisord"]
