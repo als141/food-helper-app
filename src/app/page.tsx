@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FoodItem, IdealPFC, ResultItem, optimizeFood, MenuItem, getOptimizationProgress, OptimizationProgress } from '../lib/api'
 import { Button } from "@/components/ui/button"
