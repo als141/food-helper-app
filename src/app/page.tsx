@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FoodItem, IdealPFC, ResultItem, optimizeFood } from '../lib/api'
+import { FoodItem, IdealPFC, ResultItem, optimizeFood, MenuItem } from '../lib/api'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -136,7 +136,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {result[0].menu.map((item: any, index: number) => (
+                  {result[0].menu.map((item: MenuItem, index: number) => (
                     <li key={index} className="flex justify-between items-center bg-secondary p-2 rounded">
                       <span>{item.food_name}</span>
                       <span>
