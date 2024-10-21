@@ -1,46 +1,45 @@
-'use client';
+// src/components/Sidebar.tsx
+'use client'
 
-import { useState } from 'react';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 
-export const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(false);
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
 
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   return (
-    <>
-      <div className="bg-gray-800 text-white w-64 min-h-screen hidden md:block">
-        <nav className="p-4">
-          <ul>
-            <li className="mb-2">
-              <a href="/" className="hover:text-gray-300">
-                ホーム
-              </a>
-            </li>
-            {/* 他のメニュー項目 */}
-          </ul>
-        </nav>
-      </div>
-      {/* モバイル用メニュー */}
-      <div className="md:hidden">
-        <button
-          onClick={() => setIsOpen(true)}
-          className="p-4 focus:outline-none"
-        >
-          <Bars3Icon className="h-6 w-6 text-gray-800" />
-        </button>
-        {isOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
-            <div className="fixed inset-y-0 left-0 bg-gray-800 text-white w-64 p-4">
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.5 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 bg-black z-40"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed top-0 right-0 h-full w-64 bg-white shadow-lg z-50"
+          >
+            <div className="p-4">
               <button
-                onClick={() => setIsOpen(false)}
-                className="mb-4 focus:outline-none"
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <X className="h-6 w-6 text-primary" />
               </button>
-              <nav>
-                <ul>
-                  <li className="mb-2">
-                    <a href="/" className="hover:text-gray-300">
+              <nav className="mt-8">
+                <ul className="space-y-4">
+                  <li>
+                    <a href="/" className="text-lg font-medium text-primary hover:text-primary-dark">
                       ホーム
                     </a>
                   </li>
@@ -48,9 +47,9 @@ export const Sidebar = () => {
                 </ul>
               </nav>
             </div>
-          </div>
-        )}
-      </div>
-    </>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 };

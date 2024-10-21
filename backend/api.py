@@ -6,6 +6,7 @@ import pandas as pd
 import time
 from deap import base, creator, tools, algorithms
 import numpy as np
+from typing import List
 
 app = FastAPI()
 
@@ -236,6 +237,17 @@ def optimize_pfc(available_foods, max_quantities, ideal_pfc):
 
     return results
 
+# 食材名の一覧を取得する関数
+def get_food_names() -> List[str]:
+    return list(pfc_dict.keys())
+
+# 食材名を検索する関数
+def search_food_names(query: str) -> List[str]:
+    query = query.lower()
+    return [name for name in get_food_names() if query in name.lower()]
+
+
+
 # エンドポイントの定義
 @app.post("/optimize")
 def optimize_food(food_selection: FoodSelection):
@@ -250,3 +262,13 @@ def optimize_food(food_selection: FoodSelection):
 
     results = optimize_pfc(available_foods, max_quantities, ideal_pfc)
     return results
+
+# 新しいエンドポイント: 食材名の一覧を取得
+@app.get("/food_names")
+def food_names():
+    return {"food_names": get_food_names()}
+
+# 新しいエンドポイント: 食材名を検索
+@app.get("/search_food")
+def search_food(query: str):
+    return {"results": search_food_names(query)}

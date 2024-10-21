@@ -3,18 +3,16 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FoodItem, IdealPFC, ResultItem, optimizeFood } from '../lib/api'
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
-import { PlusCircle, Trash2, ChevronRight } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { toast, Toaster } from 'react-hot-toast'
+import { FoodInput } from '../components/FoodInput'
 
 export default function Home() {
   const [foods, setFoods] = useState<FoodItem[]>([])
-  const [foodName, setFoodName] = useState('')
-  const [maxQuantity, setMaxQuantity] = useState('')
   const [idealPFC, setIdealPFC] = useState<IdealPFC>({
     protein: 140,
     fat: 60,
@@ -23,16 +21,12 @@ export default function Home() {
   const [result, setResult] = useState<ResultItem[] | null>(null)
   const [isOptimizing, setIsOptimizing] = useState(false)
 
-  const addFood = () => {
-    if (foodName && maxQuantity) {
-      setFoods([
-        ...foods,
-        { name: foodName, max_quantity: Number(maxQuantity) },
-      ])
-      setFoodName('')
-      setMaxQuantity('')
-      toast.success('食材を追加しました')
-    }
+  const addFood = (name: string, maxQuantity: number) => {
+    setFoods([
+      ...foods,
+      { name, max_quantity: maxQuantity },
+    ])
+    toast.success('食材を追加しました')
   }
 
   const removeFood = (index: number) => {
@@ -62,23 +56,7 @@ export default function Home() {
           <CardTitle>食材の入力</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex space-x-2">
-            <Input
-              type="text"
-              placeholder="食材名"
-              value={foodName}
-              onChange={(e) => setFoodName(e.target.value)}
-            />
-            <Input
-              type="number"
-              placeholder="最大量"
-              value={maxQuantity}
-              onChange={(e) => setMaxQuantity(e.target.value)}
-            />
-            <Button onClick={addFood}>
-              <PlusCircle className="mr-2 h-4 w-4" /> 追加
-            </Button>
-          </div>
+          <FoodInput onAddFood={addFood} />
           <motion.ul className="mt-4 space-y-2">
             <AnimatePresence>
               {foods.map((food, index) => (
@@ -101,6 +79,7 @@ export default function Home() {
           </motion.ul>
         </CardContent>
       </Card>
+
 
       <Card>
         <CardHeader>
