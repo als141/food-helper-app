@@ -10,6 +10,8 @@ from typing import List, Dict
 
 app = FastAPI()
 
+# コメントアウト
+
 origins = [
     "https://food-helper-app.vercel.app",
     "http://localhost",
